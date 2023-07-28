@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits } from "discord.js";
-import openai from "./config/open-ai.js";
+import promptHandler from "./command.handler.js";
+import mongoose from "mongoose";
 
 const client = new Client({
   intents: [
@@ -9,32 +10,19 @@ const client = new Client({
   ],
 });
 
-let chatHistory = [];
+mongoose
+  .connect(process.env.MONGODB_URL)
+  .then(() => console.log("MongoDB connected!"))
+  .catch((err) => {
+    console.log("MongoDB could not be connected");
+    console.error(err);
+  });
 
-client.on("messageCreate", async function (message) {
-  try {
-    if (message.author.bot) return;
-    let messages = chatHistory.map(([role, content]) => ({
-      role,
-      content,
-    }));
+client.on("messageCreate", promptHandler);
 
-    let userInput = message.content;
-
-    messages.push({ role: "user", content: userInput });
-
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: messages,
-    });
-
-    const completionText = completion.data.choices[0].message.content;
-    chatHistory.push(["user", userInput]);
-    chatHistory.push(["assistant", completionText]);
-    message.reply(completionText);
-  } catch (error) {
-    console.error(error);
-  }
+client.once("disconnect", () => {
+  console.log("Bot is disconnected. Closing MongoDB connection.");
+  mongoose.connection.close();
 });
 
 client.login(process.env.DISCORD_BOT_KEY);
