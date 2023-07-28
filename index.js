@@ -1,12 +1,25 @@
-import openai from "./config/open-ai";
+import { Client, GatewayIntentBits } from "discord.js";
+import openai from "./config/open-ai.js";
 
-async function main() {
-  const chatHistory = [];
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
+
+let chatHistory = [];
+
+client.on("messageCreate", async function (message) {
   try {
-    const messages = chatHistory.map(([role, content]) => ({
+    if (message.author.bot) return;
+    let messages = chatHistory.map(([role, content]) => ({
       role,
       content,
     }));
+
+    let userInput = message.content;
 
     messages.push({ role: "user", content: userInput });
 
@@ -16,13 +29,13 @@ async function main() {
     });
 
     const completionText = completion.data.choices[0].message.content;
-
-    console.log("Bot: " + completionText);
-    chatHistory.push(["user", "user-input-goes-here"]);
+    chatHistory.push(["user", userInput]);
     chatHistory.push(["assistant", completionText]);
+    message.reply(completionText);
   } catch (error) {
     console.error(error);
   }
-}
+});
 
-main();
+client.login(process.env.DISCORD_BOT_KEY);
+console.log("ChatGPT is online on discord");
