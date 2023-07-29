@@ -1,4 +1,3 @@
-import ChatMessage from "./ChatMessage.model.js";
 import openai from "./config/open-ai.js";
 
 const COMMAND = "!prompt";
@@ -9,47 +8,31 @@ export default async function promptHandler(message) {
 
     if (!message.content.startsWith(COMMAND)) return;
 
-    const userId = message.author.id;
+    let conversationContext = [];
+    let chatHistory = await message.channel.messages.fetch({ limit: 10 });
+    chatHistory.forEach((msg) => {
+      conversationContext.push({
+        role: !msg.author.bot ? "user" : "assistant",
+        content: msg.content,
+      });
+    });
 
-    let chatHistory = await ChatMessage.find({ author: userId })
-      .sort({ createdAt: "desc" })
-      .limit(20)
-      .lean();
-
-    chatHistory.reverse();
-
-    let messages = chatHistory.map((record) => ({
-      role: record.role,
-      content: record.message,
-    }));
+    conversationContext.reverse();
 
     let userInput = message.content.substring(COMMAND.length);
 
-    messages.push({
+    conversationContext.push({
       role: "user",
       content: userInput,
     });
 
     const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      messages: messages,
+      messages: conversationContext,
       max_tokens: parseInt(process.env.MAX_RESPONSE_LENGTH),
     });
 
     const completionText = completion.data.choices[0].message.content;
-    let userMessage = new ChatMessage({
-      author: userId,
-      role: "user",
-      message: userInput,
-    });
-    await userMessage.save();
-
-    let gptMessage = new ChatMessage({
-      author: userId,
-      role: "assistant",
-      message: completionText,
-    });
-    await gptMessage.save();
 
     message.reply(completionText);
   } catch (error) {
