@@ -21,6 +21,8 @@ export default async function promptHandler(message) {
 
     let userInput = message.content.substring(COMMAND.length);
 
+    console.log({ user: userInput });
+
     conversationContext.push({
       role: "user",
       content: userInput,
