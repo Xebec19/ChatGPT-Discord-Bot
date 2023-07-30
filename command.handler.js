@@ -9,8 +9,11 @@ export default async function promptHandler(message) {
 
     if (!message.content.startsWith(COMMAND)) return;
 
+    const guildId = message.guild?.id;
+
     // check if message is from an authorised server
-    if (!checkGuildId({ guildId: message.guild })) {
+    if (!checkGuildId({ guildId })) {
+      console.log({ "unauthorised guild": guildId });
       message.reply("Unauthorised server!");
       return;
     }
