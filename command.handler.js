@@ -1,3 +1,4 @@
+import checkGuildId from "./config/allowed-servers.js";
 import openai from "./config/open-ai.js";
 
 const COMMAND = "!prompt";
@@ -7,6 +8,12 @@ export default async function promptHandler(message) {
     if (message.author.bot) return;
 
     if (!message.content.startsWith(COMMAND)) return;
+
+    // check if message is from an authorised server
+    if (!checkGuildId({ guildId: message.guild })) {
+      message.reply("Unauthorised server!");
+      return;
+    }
 
     let conversationContext = [];
     let chatHistory = await message.channel.messages.fetch({ limit: 10 });
